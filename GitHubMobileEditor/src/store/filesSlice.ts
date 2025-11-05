@@ -3,6 +3,7 @@ import { FilesState, FileItem, CachedFile } from '../types';
 
 const initialState: FilesState = {
   currentPath: '',
+  pathHistory: [],
   items: [],
   cache: {},
   loading: false,
@@ -15,6 +16,22 @@ const filesSlice = createSlice({
   reducers: {
     setCurrentPath: (state, action: PayloadAction<string>) => {
       state.currentPath = action.payload;
+    },
+    navigateToFolder: (state, action: PayloadAction<string>) => {
+      // Push current path to history before navigating
+      state.pathHistory.push(state.currentPath);
+      state.currentPath = action.payload;
+    },
+    navigateBack: (state) => {
+      // Pop from history to go back
+      if (state.pathHistory.length > 0) {
+        state.currentPath = state.pathHistory.pop() || '';
+      }
+    },
+    resetNavigation: (state) => {
+      // Reset to root when switching repositories
+      state.currentPath = '';
+      state.pathHistory = [];
     },
     setFileItems: (state, action: PayloadAction<FileItem[]>) => {
       state.items = action.payload;
@@ -46,6 +63,9 @@ const filesSlice = createSlice({
 
 export const {
   setCurrentPath,
+  navigateToFolder,
+  navigateBack,
+  resetNavigation,
   setFileItems,
   setCachedFile,
   updateCachedFileContent,

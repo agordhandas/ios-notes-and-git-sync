@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SafeAreaView, StatusBar, StyleSheet, View } from 'react-native';
-import { Provider, useSelector } from 'react-redux';
+import { Provider, useSelector, useDispatch } from 'react-redux';
 import { store } from './store';
 import { RootState } from './store';
 import { AuthScreen } from './screens/AuthScreen';
@@ -9,6 +9,7 @@ import { FileBrowserScreen } from './screens/FileBrowserScreen';
 import { EditorScreen } from './screens/EditorScreen';
 import { Repository, FileItem } from './types';
 import { useSyncManager } from './utils/useSyncManager';
+import { resetNavigation } from './store/filesSlice';
 
 type Screen =
   | { type: 'auth' }
@@ -19,6 +20,7 @@ type Screen =
 const AppContent: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<Screen>({ type: 'auth' });
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
+  const dispatch = useDispatch();
 
   // Initialize sync manager
   useSyncManager();
@@ -34,6 +36,7 @@ const AppContent: React.FC = () => {
   };
 
   const handleSelectRepository = (repository: Repository) => {
+    dispatch(resetNavigation());
     setCurrentScreen({ type: 'files', repository });
   };
 

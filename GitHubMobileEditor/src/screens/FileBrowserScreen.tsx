@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
-import { setFileItems, setLoading, setError } from '../store/filesSlice';
+import { setFileItems, setLoading, setError, navigateToFolder, navigateBack, resetNavigation } from '../store/filesSlice';
 import { githubApi } from '../services/githubApi';
 import { FileItem, Repository } from '../types';
 
@@ -27,14 +27,12 @@ export const FileBrowserScreen: React.FC<FileBrowserScreenProps> = ({
   onSelectFile,
   onBack,
 }) => {
-  const [currentPath, setCurrentPath] = useState('');
-  const [pathHistory, setPathHistory] = useState<string[]>([]);
   const [showNewFileModal, setShowNewFileModal] = useState(false);
   const [newFileName, setNewFileName] = useState('');
   const [newFileError, setNewFileError] = useState<string | null>(null);
 
   const dispatch = useDispatch();
-  const { items, loading, error } = useSelector((state: RootState) => state.files);
+  const { items, loading, error, currentPath, pathHistory } = useSelector((state: RootState) => state.files);
 
   useEffect(() => {
     loadFiles(currentPath);
@@ -56,8 +54,7 @@ export const FileBrowserScreen: React.FC<FileBrowserScreenProps> = ({
 
   const handleItemPress = (item: FileItem) => {
     if (item.type === 'dir') {
-      setPathHistory([...pathHistory, currentPath]);
-      setCurrentPath(item.path);
+      dispatch(navigateToFolder(item.path));
     } else {
       onSelectFile(item);
     }
@@ -65,10 +62,7 @@ export const FileBrowserScreen: React.FC<FileBrowserScreenProps> = ({
 
   const handleGoBack = () => {
     if (pathHistory.length > 0) {
-      const newHistory = [...pathHistory];
-      const previousPath = newHistory.pop();
-      setPathHistory(newHistory);
-      setCurrentPath(previousPath || '');
+      dispatch(navigateBack());
     } else {
       onBack();
     }

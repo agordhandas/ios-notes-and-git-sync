@@ -63,6 +63,7 @@ export interface RepositoriesState {
 
 export interface FilesState {
   currentPath: string;
+  pathHistory: string[];
   items: FileItem[];
   cache: Record<string, CachedFile>;
   loading: boolean;
