@@ -30,6 +30,7 @@ export const FileBrowserScreen: React.FC<FileBrowserScreenProps> = ({
   const [showNewFileModal, setShowNewFileModal] = useState(false);
   const [newFileName, setNewFileName] = useState('');
   const [newFileError, setNewFileError] = useState<string | null>(null);
+  const [locationType, setLocationType] = useState<'current' | 'default'>('current');
 
   const dispatch = useDispatch();
   const { items, loading, error, currentPath, pathHistory } = useSelector((state: RootState) => state.files);
@@ -68,16 +69,51 @@ export const FileBrowserScreen: React.FC<FileBrowserScreenProps> = ({
     }
   };
 
-  const handleCreateFile = () => {
+  const getTodayDateString = (): string => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getDefaultLocationPath = (filename: string): string => {
+    const dateString = getTodayDateString();
+    // Ensure filename ends with .md
+    const finalFilename = filename.endsWith('.md') ? filename : `${filename}.md`;
+    return `ankit's thoughts/${dateString}/${finalFilename}`;
+  };
+
+  const handleCreateFile = async () => {
     if (!newFileName.trim()) {
       setNewFileError('Please enter a filename');
       return;
     }
 
-    const fullPath = currentPath ? `${currentPath}/${newFileName}` : newFileName;
+    let fullPath: string;
+    let fileName: string;
+
+    if (locationType === 'default') {
+      // Check if default directory exists
+      const dateString = getTodayDateString();
+      const defaultDirectory = `ankit's thoughts/${dateString}`;
+
+      try {
+        await githubApi.getContents(repository.owner, repository.name, defaultDirectory);
+      } catch (err: any) {
+        setNewFileError(`Default location "${defaultDirectory}" does not exist. Please create the directory first.`);
+        return;
+      }
+
+      fullPath = getDefaultLocationPath(newFileName);
+      fileName = newFileName.endsWith('.md') ? newFileName : `${newFileName}.md`;
+    } else {
+      fullPath = currentPath ? `${currentPath}/${newFileName}` : newFileName;
+      fileName = newFileName;
+    }
 
     const newFile: FileItem = {
-      name: newFileName,
+      name: fileName,
       path: fullPath,
       type: 'file',
       sha: '',
@@ -88,6 +124,7 @@ export const FileBrowserScreen: React.FC<FileBrowserScreenProps> = ({
     setShowNewFileModal(false);
     setNewFileName('');
     setNewFileError(null);
+    setLocationType('current');
     onSelectFile(newFile);
   };
 
@@ -212,12 +249,6 @@ export const FileBrowserScreen: React.FC<FileBrowserScreenProps> = ({
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Create New File</Text>
 
-            {currentPath && (
-              <Text style={styles.currentPathLabel}>
-                In: {currentPath}/
-              </Text>
-            )}
-
             <TextInput
               style={styles.input}
               value={newFileName}
@@ -232,6 +263,38 @@ export const FileBrowserScreen: React.FC<FileBrowserScreenProps> = ({
               autoFocus
             />
 
+            <Text style={styles.locationLabel}>Location:</Text>
+
+            <TouchableOpacity
+              style={styles.locationOption}
+              onPress={() => setLocationType('current')}
+            >
+              <View style={styles.radioButton}>
+                {locationType === 'current' && <View style={styles.radioButtonSelected} />}
+              </View>
+              <View style={styles.locationTextContainer}>
+                <Text style={styles.locationOptionTitle}>Current Location</Text>
+                <Text style={styles.locationPath}>
+                  {currentPath ? `${currentPath}/${newFileName || 'filename.md'}` : newFileName || 'filename.md'}
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.locationOption}
+              onPress={() => setLocationType('default')}
+            >
+              <View style={styles.radioButton}>
+                {locationType === 'default' && <View style={styles.radioButtonSelected} />}
+              </View>
+              <View style={styles.locationTextContainer}>
+                <Text style={styles.locationOptionTitle}>Default Location</Text>
+                <Text style={styles.locationPath}>
+                  {getDefaultLocationPath(newFileName || 'filename.md')}
+                </Text>
+              </View>
+            </TouchableOpacity>
+
             {newFileError && <Text style={styles.errorText}>{newFileError}</Text>}
 
             <View style={styles.modalButtons}>
@@ -241,6 +304,7 @@ export const FileBrowserScreen: React.FC<FileBrowserScreenProps> = ({
                   setShowNewFileModal(false);
                   setNewFileName('');
                   setNewFileError(null);
+                  setLocationType('current');
                 }}
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -424,5 +488,52 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  locationLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#24292e',
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  locationOption: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#d1d5da',
+    borderRadius: 6,
+    marginBottom: 12,
+  },
+  radioButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#0366d6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    marginTop: 2,
+  },
+  radioButtonSelected: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#0366d6',
+  },
+  locationTextContainer: {
+    flex: 1,
+  },
+  locationOptionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#24292e',
+    marginBottom: 4,
+  },
+  locationPath: {
+    fontSize: 12,
+    color: '#586069',
+    fontFamily: 'monospace',
   },
 });
